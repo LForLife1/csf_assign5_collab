@@ -20,7 +20,12 @@ Connection::Connection(int fd)
 void Connection::connect(const std::string &hostname, int port) {
   // call open_clientfd to connect to the server
   std::string port_as_str = std::to_string(port);
-  open_clientfd(hostname.c_str(), port_as_str.c_str());
+  int result = open_clientfd(hostname.c_str(), port_as_str.c_str());
+
+  if (result < 0) {
+    fprintf(stderr, "Could not connect to the host\n");
+    exit(1);
+  }
 
   // call rio_readinitb to initialize the rio_t object
   rio_readinitb(&m_fdbuf, m_fd);
