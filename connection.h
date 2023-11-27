@@ -48,6 +48,8 @@ private:
   Connection(const Connection &);
   Connection &operator=(const Connection &);
 
+  bool isValidTag(const std::string tag) const;
+
   // these are the recommended member variables for the
   // Connection class
   int m_fd;
