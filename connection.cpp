@@ -98,7 +98,7 @@ bool Connection::receive(Message &msg) {
   return true;
 }
 
-bool isValidTag(const std::string tag) {
+bool Connection::isValidTag(const std::string tag) const {
   if (tag == TAG_ERR || tag == TAG_OK || tag == TAG_SLOGIN || tag == TAG_RLOGIN || tag == TAG_JOIN || tag == TAG_LEAVE || 
       tag == TAG_SENDALL || tag == TAG_SENDUSER || tag == TAG_QUIT || tag == TAG_DELIVERY || tag == TAG_EMPTY) {
     return true;
