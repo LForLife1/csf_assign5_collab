@@ -21,9 +21,24 @@ int main(int argc, char **argv) {
   server_port = std::stoi(argv[2]);
   username = argv[3];
 
-  // TODO: connect to server
+  Connection conn;
+
+  // connect to server
+  conn.connect(server_hostname, server_port);
+  if (!conn.is_open()) {
+    fprintf(stderr, "Could not connect to the server\n");
+    return 1;
+  }
 
   // TODO: send slogin message
+  Message slogin_msg(TAG_SLOGIN, username);
+  Message login_response;
+  conn.send(slogin_msg);
+  conn.receive(login_response);
+  if (login_response.tag == TAG_ERR) {
+    fprintf(stderr, login_response.data.c_str());
+    return 1;
+  }
 
   // TODO: loop reading commands from user, sending messages to
   //       server as appropriate
