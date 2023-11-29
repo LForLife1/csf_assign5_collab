@@ -46,27 +46,25 @@ int main(int argc, char **argv) {
   // loop reading commands from user, sending messages to server as appropriate
   while (true) {
     std::getline(std::cin, user_input);
-    //Commands
+    //user inputted a command
     if(user_input.at(0) == '/'){
       if(user_input == "/quit"){  //quit
-        response.tag = TAG_QUIT;
-        response.data = " ";
-        conn.send(response);
+        Message quit_msg(TAG_QUIT, " ");
+        conn.send(quit_msg);
         conn.receive(response); //wait for server response before quitting
         if (response.tag == TAG_ERR) { 
           fprintf(stderr, response.data.c_str());
         }
+        conn.close(); //should this happen if we recieve an error
         return 0;
 
       } else if(user_input == "/leave") { //leave
-        response.tag = TAG_LEAVE;
-        response.data = " ";
-        conn.send(response);
+        Message leave_msg(TAG_LEAVE, " ");
+        conn.send(leave_msg);
 
       } else if(user_input == "/join"){   //join
-        response.tag = TAG_JOIN;
-        response.data = user_input.substr(6); //room name after "/join "
-        conn.send(response);
+        Message join_msg(TAG_JOIN, user_input.substr(6)); //room name after "/join "
+        conn.send(join_msg);
       }
 
       else {
@@ -79,10 +77,10 @@ int main(int argc, char **argv) {
         //TODO: WHAT HAPPENS IF INPUT MESSAGE IS TOO LONG
         fprintf(stderr, "Message too long\n");
         continue; //don't send a message so don't check recieve
-      } else{
-        response.tag = TAG_SENDALL;
-        response.data = user_input;
-        conn.send(response);
+      } 
+      else {
+        Message message_msg(TAG_SENDALL, user_input);
+        conn.send(message_msg);
       }
     }
 
