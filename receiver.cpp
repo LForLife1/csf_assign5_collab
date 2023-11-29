@@ -22,29 +22,40 @@ int main(int argc, char **argv) {
 
   // connect to server
   conn.connect(server_hostname, server_port);
+  if (!conn.is_open()) {
+    fprintf(stderr, "Could not connect to the server\n");
+    return 1;
+  }
 
   // attempt to login
-  Message response;
   Message rlogin_msg(TAG_RLOGIN, username);
+  Message login_response;
   conn.send(rlogin_msg);
-  if (!conn.receive(response) || response.tag == TAG_ERR) {
-    fprintf(stderr, response.data.c_str());
-    exit(1);
+  conn.receive(login_response);
+  if (login_response.tag == TAG_ERR) {
+    fprintf(stderr, login_response.data.c_str());
+    return 1;
   }
 
   //attempt to join
   Message join_msg(TAG_JOIN, room_name);
+  Message join_response;
   conn.send(join_msg);
-  if (!conn.receive(response) || response.tag == TAG_ERR) {
-    fprintf(stderr, response.data.c_str());
-    exit(1);
+  conn.receive(join_response);
+  if (join_response.tag == TAG_ERR) {
+    fprintf(stderr, join_response.data.c_str());
+    conn.close();
+    return 1;
   }
 
   // loop waiting for messages from server
   // (which should be tagged with TAG_DELIVERY)
+  Message response;
   while (true) {
-    if (!conn.receive(response) || response.tag == TAG_ERR) {
+    conn.receive(response);
+    if (response.tag == TAG_ERR) {
       fprintf(stderr, response.data.c_str());
+      conn.close();
       return 1;
     }
     else if (response.tag == TAG_DELIVERY) {
@@ -54,7 +65,5 @@ int main(int argc, char **argv) {
       std::cout << response.data.substr(sender_index + 1, sender_len) << ": " << response.data.substr(message_index + 1);
     }
   }
-
-
   return 0;
 }

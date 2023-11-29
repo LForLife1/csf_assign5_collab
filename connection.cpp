@@ -20,7 +20,7 @@ Connection::Connection(int fd)
 void Connection::connect(const std::string &hostname, int port) {
   // call open_clientfd to connect to the server
   std::string port_as_str = std::to_string(port);
-  int m_fd = open_clientfd(hostname.c_str(), port_as_str.c_str());
+  m_fd = open_clientfd(hostname.c_str(), port_as_str.c_str());
 
   if (m_fd < 0) {
     fprintf(stderr, "Could not connect to the host\n");
@@ -33,7 +33,9 @@ void Connection::connect(const std::string &hostname, int port) {
 
 Connection::~Connection() {
   // close the socket if it is open
-  close();
+   if(is_open()) {
+     Close(m_fd);
+   }
 }
 
 bool Connection::is_open() const {
@@ -56,17 +58,19 @@ bool Connection::send(const Message &msg) {
   }
 
   std::string formatted_message = msg.tag + ":" + msg.data + "\n";
+  char c_formatted_message[formatted_message.length() + 1]; 
+  strcpy(c_formatted_message, formatted_message.c_str());
+
   // send a message
-  ssize_t result = rio_writen(m_fd, formatted_message.c_str(), strlen(formatted_message.c_str()));
-  
+  ssize_t result = rio_writen(m_fd, &c_formatted_message, formatted_message.length());
+ 
   // return true if successful, false if not
   if (result < 0) {
     m_last_result = EOF_OR_ERROR;
     return false;
-  } else {
-    m_last_result = SUCCESS;
-    return true;
   }
+  m_last_result = SUCCESS;
+  return true;
 }
 
 bool Connection::receive(Message &msg) {
