@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
   conn.receive(login_response);
   if (login_response.tag == TAG_ERR) {
     fprintf(stderr, login_response.data.c_str());
+    conn.close();
     return 1;
   }
 
@@ -59,9 +60,12 @@ int main(int argc, char **argv) {
       return 1;
     }
     else if (response.tag == TAG_DELIVERY) {
+      // response.data = "[room]:[sender]:[message]"
       int sender_index = response.data.find(":");
       int message_index = response.data.find(":", sender_index + 1);
       int sender_len = message_index - sender_index - 1;
+      
+      // std::cout << "[sender]: [message]"
       std::cout << response.data.substr(sender_index + 1, sender_len) << ": " << response.data.substr(message_index + 1);
     }
   }

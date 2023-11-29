@@ -1,0 +1,7 @@
+slogin:alice
+join:partytime
+sendall:Hello World!
+join:cafe
+sendall:get me 1 coffee
+leave: 
+quit:bye
