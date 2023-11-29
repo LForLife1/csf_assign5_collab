@@ -55,7 +55,6 @@ bool Connection::send(const Message &msg) {
     return false;
   }
 
-
   std::string formatted_message = msg.tag + ":" + msg.data + "\n";
   // send a message
   ssize_t result = rio_writen(m_fd, formatted_message.c_str(), strlen(formatted_message.c_str()));
@@ -72,29 +71,35 @@ bool Connection::send(const Message &msg) {
 
 bool Connection::receive(Message &msg) {
   // receive a message, storing its tag and data in msg
-  char receive_buffer[msg.MAX_LEN];
+  char receive_buffer[msg.MAX_LEN] = "";
   ssize_t result = rio_readlineb(&m_fdbuf, receive_buffer, msg.MAX_LEN);
 
   // return true if successful, false if not
-  if (result <= 0) {
+  if (result < 0) {
     m_last_result = EOF_OR_ERROR;
     return false;
   }
   
-  std::string rec_str = receive_buffer;
-  int colon_index = rec_str.find(":");
-  std::string tag = rec_str.substr(0,colon_index);
-  std::string data = rec_str.substr(colon_index + 1);
+  if(receive_buffer != NULL) {
+    std::string rec_str = receive_buffer;
+    int colon_index = rec_str.find(":");
+    std::string tag = rec_str.substr(0,colon_index);
+    std::string data = rec_str.substr(colon_index + 1);
 
-  if (!isValidTag(tag)) {
-    m_last_result = INVALID_MSG;
+    if (!isValidTag(tag)) {
+      m_last_result = INVALID_MSG;
+      return false;
+    }
+
+    msg.tag = tag;
+    msg.data = data;
+    m_last_result = SUCCESS;
+
+  } else { //recieve buffer was NULL
+    m_last_result = EOF_OR_ERROR;
     return false;
   }
-
-  msg.tag = tag;
-  msg.data = data;
-
-  m_last_result = SUCCESS;
+  
   return true;
 }
 
