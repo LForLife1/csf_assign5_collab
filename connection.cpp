@@ -20,9 +20,9 @@ Connection::Connection(int fd)
 void Connection::connect(const std::string &hostname, int port) {
   // call open_clientfd to connect to the server
   std::string port_as_str = std::to_string(port);
-  int result = open_clientfd(hostname.c_str(), port_as_str.c_str());
+  int m_fd = open_clientfd(hostname.c_str(), port_as_str.c_str());
 
-  if (result < 0) {
+  if (m_fd < 0) {
     fprintf(stderr, "Could not connect to the host\n");
     exit(1);
   }
