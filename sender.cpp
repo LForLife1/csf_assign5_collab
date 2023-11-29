@@ -77,6 +77,8 @@ int main(int argc, char **argv) {
     } else { 
       if(user_input.length() > response.MAX_LEN) {
         //TODO: WHAT HAPPENS IF INPUT MESSAGE IS TOO LONG
+        fprintf(stderr, "Message too long\n");
+        continue; //don't send a message so don't check recieve
       } else{
         response.tag = TAG_SENDALL;
         response.data = user_input;
