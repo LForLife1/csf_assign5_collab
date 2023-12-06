@@ -37,6 +37,7 @@ int main(int argc, char **argv) {
   conn.receive(login_response);
   if (login_response.tag == TAG_ERR) {
     fprintf(stderr, login_response.data.c_str());
+    conn.close();
     return 1;
   }
 
@@ -48,8 +49,9 @@ int main(int argc, char **argv) {
     std::getline(std::cin, user_input);
     //user inputted a command
     if(user_input.at(0) == '/'){
-      if(user_input == "/quit"){  //quit
-        Message quit_msg(TAG_QUIT, " ");
+      std::string command = user_input.substr(0, user_input.find(' '));
+      if(command == "/quit"){  //quit
+        Message quit_msg(TAG_QUIT, "bye");
         conn.send(quit_msg);
         conn.receive(response); //wait for server response before quitting
         if (response.tag == TAG_ERR) { 
@@ -58,11 +60,12 @@ int main(int argc, char **argv) {
         conn.close(); //should this happen if we recieve an error
         return 0;
 
-      } else if(user_input == "/leave") { //leave
+      } else if(command == "/leave") { //leave
         Message leave_msg(TAG_LEAVE, " ");
         conn.send(leave_msg);
 
-      } else if(user_input == "/join"){   //join
+      } else if(command == "/join"){   //join
+        printf("joined");
         Message join_msg(TAG_JOIN, user_input.substr(6)); //room name after "/join "
         conn.send(join_msg);
       }
@@ -74,7 +77,6 @@ int main(int argc, char **argv) {
     //otherwise, trying to send message
     } else { 
       if(user_input.length() > response.MAX_LEN) {
-        //TODO: WHAT HAPPENS IF INPUT MESSAGE IS TOO LONG
         fprintf(stderr, "Message too long\n");
         continue; //don't send a message so don't check recieve
       } 
@@ -90,13 +92,6 @@ int main(int argc, char **argv) {
     }
 
   }
-   //while loop
-  //wait for stdin input (Commands start with the / character and may be one of the following, reject rest to stderr)
-  //if quit, break loop
-    // the sender must wait for a reply from the server before exiting with exit code 0.
-  //if join, join room
-  //if leave, leave the room
-  //if message, send message in room
 
   return 0;
 }
