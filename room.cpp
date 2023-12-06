@@ -18,7 +18,7 @@ Room::~Room() {
 void Room::add_member(User *user) {
   // add User to the room
   Guard g(lock);
-  members.emplace(user);
+  members.insert(user);
 }
 
 void Room::remove_member(User *user) {
@@ -28,5 +28,19 @@ void Room::remove_member(User *user) {
 }
 
 void Room::broadcast_message(const std::string &sender_username, const std::string &message_text) {
-  // send a message to every (receiver) User in the room
+  
+  Guard g(lock);
+  //Create the text for the message, and the message itself
+  //Make new object to put on heap
+  std::string message_text = room_name + ":" + sender_username + ":" + message_text;
+  Message* message = new Message(TAG_DELIVERY, message_text);
+
+  //For each user in the Room, enqueue the message to their message queue
+  for(User* user : members) {
+    if (user->username != sender_username);
+    {
+      user->mqueue.enqueue(message);
+    }
+  }
+  
 }
