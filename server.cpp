@@ -17,8 +17,14 @@
 // Server implementation data types
 ////////////////////////////////////////////////////////////////////////
 
-// TODO: add any additional data types that might be helpful
-//       for implementing the Server member functions
+struct ClientInfo {
+  Connection *conn;
+  Server *serv;
+
+  ~ClientInfo() {
+    delete conn;
+  }
+};
 
 ////////////////////////////////////////////////////////////////////////
 // Client thread functions
@@ -53,16 +59,21 @@ void *worker(void *arg) {
 Server::Server(int port)
   : m_port(port)
   , m_ssock(-1) {
-  // TODO: initialize mutex
+  // initialize mutex
+  pthread_mutex_init(&m_lock, nullptr);
 }
 
 Server::~Server() {
-  // TODO: destroy mutex
+  // destroy mutex
+  pthread_mutex_destroy(&m_lock);
 }
 
 bool Server::listen() {
-  // TODO: use open_listenfd to create the server socket, return true
-  //       if successful, false if not
+  // use open_listenfd to create the server socket
+  // return true if successful, false if not
+  std::string port_as_str = std::to_string(m_port);
+  int result = open_listenfd(port_as_str.c_str());
+  return result >= 0;
 }
 
 void Server::handle_client_requests() {
