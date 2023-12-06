@@ -17,11 +17,13 @@
 // Server implementation data types
 ////////////////////////////////////////////////////////////////////////
 
-struct ClientInfo {
+struct ClientInfo
+{
   Connection *conn;
   Server *serv;
 
-  ~ClientInfo() {
+  ~ClientInfo()
+  {
     delete conn;
   }
 };
@@ -30,25 +32,29 @@ struct ClientInfo {
 // Client thread functions
 ////////////////////////////////////////////////////////////////////////
 
-namespace {
+namespace
+{
 
-void *worker(void *arg) {
-  pthread_detach(pthread_self());
+  void *worker(void *arg)
+  {
+    pthread_detach(pthread_self());
 
-  // TODO: use a static cast to convert arg from a void* to
-  //       whatever pointer type describes the object(s) needed
-  //       to communicate with a client (sender or receiver)
+    // use a static cast to convert arg from a void* to
+    // whatever pointer type describes the object(s) needed
+    // to communicate with a client (sender or receiver)
+    ClientInfo* clientInfo = static_cast<ClientInfo*>(arg);
 
-  // TODO: read login message (should be tagged either with
-  //       TAG_SLOGIN or TAG_RLOGIN), send response
+    // read login message (should be tagged either with
+    // TAG_SLOGIN or TAG_RLOGIN), send response
+    
 
-  // TODO: depending on whether the client logged in as a sender or
-  //       receiver, communicate with the client (implementing
-  //       separate helper functions for each of these possibilities
-  //       is a good idea)
+    // TODO: depending on whether the client logged in as a sender or
+    //       receiver, communicate with the client (implementing
+    //       separate helper functions for each of these possibilities
+    //       is a good idea)
 
-  return nullptr;
-}
+    return nullptr;
+  }
 
 }
 
@@ -57,18 +63,20 @@ void *worker(void *arg) {
 ////////////////////////////////////////////////////////////////////////
 
 Server::Server(int port)
-  : m_port(port)
-  , m_ssock(-1) {
+    : m_port(port), m_ssock(-1)
+{
   // initialize mutex
   pthread_mutex_init(&m_lock, nullptr);
 }
 
-Server::~Server() {
+Server::~Server()
+{
   // destroy mutex
   pthread_mutex_destroy(&m_lock);
 }
 
-bool Server::listen() {
+bool Server::listen()
+{
   // use open_listenfd to create the server socket
   // return true if successful, false if not
   std::string port_as_str = std::to_string(m_port);
@@ -76,12 +84,28 @@ bool Server::listen() {
   return result >= 0;
 }
 
-void Server::handle_client_requests() {
-  // TODO: infinite loop calling accept or Accept, starting a new
-  //       pthread for each connected client
+void Server::handle_client_requests()
+{
+  // infinite loop calling accept or Accept, starting a new
+  // pthread for each connected client
+  while (true)
+  {
+    int fd = Accept(m_ssock, nullptr, nullptr);
+    if (fd == -1) {
+      continue; // if fail, just keep trying infinitely
+    }
+
+    ClientInfo *clientInfo = new ClientInfo();
+    pthread_t thread_id;
+    if (pthread_create(&thread_id, NULL, worker, clientInfo) != 0) {
+      fprintf(stderr, "pthread_create failed");
+      exit(1);
+    }
+  }
 }
 
-Room *Server::find_or_create_room(const std::string &room_name) {
+Room *Server::find_or_create_room(const std::string &room_name)
+{
   // TODO: return a pointer to the unique Room object representing
   //       the named chat room, creating a new one if necessary
 }
