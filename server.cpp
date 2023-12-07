@@ -106,6 +106,19 @@ void Server::handle_client_requests()
 
 Room *Server::find_or_create_room(const std::string &room_name)
 {
-  // TODO: return a pointer to the unique Room object representing
-  //       the named chat room, creating a new one if necessary
+  // return a pointer to the unique Room object representing
+  // the named chat room, creating a new one if necessary
+  Guard g(m_lock);
+  Room *room_ret;
+
+  //if it doesn't exist, it will return end and make new room
+  //otherwise return the room pointer
+  RoomMap::iterator room_location = m_rooms.find(room_name);
+  if (room_location == m_rooms.end()) {
+    room_ret = new Room(room_name);
+    m_rooms.insert({room_name, room_ret});
+  } else {
+    room_ret = room_location->second;
+  }
+  return room_ret;
 }
