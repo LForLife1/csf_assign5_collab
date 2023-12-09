@@ -29,17 +29,53 @@ struct ClientInfo
 };
 
 ////////////////////////////////////////////////////////////////////////
+// Helper functions
+////////////////////////////////////////////////////////////////////////
+
+std::string remove_trailing_newline(std::string in) {
+  std::string ret = in;
+  if (ret.back() == '\n') {
+    ret.pop_back();
+  }
+  return ret;
+}
+
+////////////////////////////////////////////////////////////////////////
 // Client thread functions
 ////////////////////////////////////////////////////////////////////////
 
 namespace
 {
 
-  void clientReceiverLoop() {
+  void chat_with_receiver(Connection *conn, Server *serv, User *user, Message *msg) {
+    
+    //attempt to join user to room
+    //first get user message, see if it is join attempt
+    if (!conn->receive(*msg)) {
+      if (conn->get_last_result() == Connection::INVALID_MSG) {
+        conn->send(Message(TAG_ERR, "invalid message"));
+      }
+      return;
+    }
+    if (msg->tag != TAG_JOIN) {
+      conn->send(Message(TAG_ERR, "not joined a room"));
+      return;
+    }
+    roomName = remove_trailing_newline(msg->data);
+    room = server->find_or_create_room(roomName);
+    room->add_member(user);
+    conn->send(Message(TAG_OK, user->username + " joined " + r->get_room_name()));
+
+    //loop while in room
+    //see if there is a new message for the user to receieve
+    //if so and no error in it, send the message to the user
+    while (true) {
+      
+      }
 
   }
 
-  void clientSenderLoop() {
+  void chat_with_sender(Connection *conn, Server *serv, User *user, Message *msg) {
 
   }
 
@@ -51,6 +87,7 @@ namespace
     // whatever pointer type describes the object(s) needed
     // to communicate with a client (sender or receiver)
     ClientInfo* clientInfo = static_cast<ClientInfo*>(arg);
+    std::unique_ptr<ConnInfo> info(clientInfo); //use for automatic management of info
 
     // read login message (should be tagged either with
     // TAG_SLOGIN or TAG_RLOGIN), send response
@@ -70,6 +107,11 @@ namespace
       info->conn->send(Message(TAG_ERR, "Invalid login attempt"));
       return nullptr;
     } //will be 0 if sender login
+
+    //We logged in, (try to) send ok message 
+    if (!info->conn->send(Message(TAG_OK, "logged in"))) {
+      return nullptr;
+    }
     
     // depending on whether the client logged in as a sender or
     // receiver, communicate with the client (implementing
@@ -77,13 +119,13 @@ namespace
     // is a good idea)
 
     //get username to make user
-    std::string username = msg.data;
-    username = username.substr(0, username.size() -1);
+    std::string username = remove_trailing_newline(msg.data);
+    User *user = new User(username);
 
     if (isReceiver == 1) {
-      clientReceiverLoop();
+      chat_with_receiver(info->conn, info->serv, username, &msg);
     } else {
-      clientSenderLoop();
+      chat_with_sender(info->conn, info->serv, username, &msg);
     }
 
     return nullptr;
