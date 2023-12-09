@@ -35,6 +35,14 @@ struct ClientInfo
 namespace
 {
 
+  void clientReceiverLoop() {
+
+  }
+
+  void clientSenderLoop() {
+
+  }
+
   void *worker(void *arg)
   {
     pthread_detach(pthread_self());
@@ -46,12 +54,37 @@ namespace
 
     // read login message (should be tagged either with
     // TAG_SLOGIN or TAG_RLOGIN), send response
-    
+    Message msg;
 
-    // TODO: depending on whether the client logged in as a sender or
-    //       receiver, communicate with the client (implementing
-    //       separate helper functions for each of these possibilities
-    //       is a good idea)
+    if (!info->conn->receive(msg)) { //could not receive message
+      if (info->conn->get_last_result() == Connection::INVALID_MSG) {
+        info->conn->send(Message(TAG_ERR, "Invalid message"));
+      }
+      return nullptr;
+    }
+
+    int isReceiver = 0; //0 be false, 1 be true
+    if(msg.tag == TAG_RLOGIN) {
+      isReceiver == 1;
+    } else if (msg.tag != TAG_SLOGIN) { //invalid tag
+      info->conn->send(Message(TAG_ERR, "Invalid login attempt"));
+      return nullptr;
+    } //will be 0 if sender login
+    
+    // depending on whether the client logged in as a sender or
+    // receiver, communicate with the client (implementing
+    // separate helper functions for each of these possibilities
+    // is a good idea)
+
+    //get username to make user
+    std::string username = msg.data;
+    username = username.substr(0, username.size() -1);
+
+    if (isReceiver == 1) {
+      clientReceiverLoop();
+    } else {
+      clientSenderLoop();
+    }
 
     return nullptr;
   }
@@ -92,14 +125,17 @@ void Server::handle_client_requests()
   {
     int fd = Accept(m_ssock, nullptr, nullptr);
     if (fd == -1) {
-      continue; // if fail, just keep trying infinitely
+      fprintf(stderr, "Error accepting connection\n");
+      return;
     }
 
     ClientInfo *clientInfo = new ClientInfo();
+    clientInfo->conn = new Connection(fd);
+    clientInfo->serv = this;
     pthread_t thread_id;
     if (pthread_create(&thread_id, NULL, worker, clientInfo) != 0) {
       fprintf(stderr, "pthread_create failed");
-      exit(1);
+      return;
     }
   }
 }
