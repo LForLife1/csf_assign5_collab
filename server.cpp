@@ -32,6 +32,8 @@ struct ClientInfo
 // Helper functions
 ////////////////////////////////////////////////////////////////////////
 
+//Removes the trailing newline from a string if it exists
+//Doesn't modify otherwise
 std::string remove_trailing_newline(std::string in) {
   std::string ret = in;
   if (ret.back() == '\n') {
@@ -47,36 +49,92 @@ std::string remove_trailing_newline(std::string in) {
 namespace
 {
 
-  void chat_with_receiver(Connection *conn, Server *serv, User *user, Message *msg) {
+  void chat_with_receiver(Connection *conn, Server *serv, User *user, Message &msg) {
     
     //attempt to join user to room
     //first get user message, see if it is join attempt
-    if (!conn->receive(*msg)) {
+    if (!conn->receive(msg)) {
       if (conn->get_last_result() == Connection::INVALID_MSG) {
         conn->send(Message(TAG_ERR, "invalid message"));
       }
       return;
     }
-    if (msg->tag != TAG_JOIN) {
+    if (msg.tag != TAG_JOIN) {
       conn->send(Message(TAG_ERR, "not joined a room"));
       return;
     }
-    roomName = remove_trailing_newline(msg->data);
-    room = server->find_or_create_room(roomName);
-    room->add_member(user);
-    conn->send(Message(TAG_OK, user->username + " joined " + r->get_room_name()));
 
-    //loop while in room
+    std::string roomName = remove_trailing_newline(msg.data);
+    Room *room = serv->find_or_create_room(roomName);
+    room->add_member(user);
+    conn->send(Message(TAG_OK, user->username + " joined " + room->get_room_name()));
+
+    //loop while in room and no failure message
     //see if there is a new message for the user to receieve
     //if so and no error in it, send the message to the user
     while (true) {
-      
+      Message *message_r = user->mqueue.dequeue();
+      if (message_r != nullptr) {
+        if(!conn->send(*message_r)) {
+          delete message_r;
+          break;
+        }
+        delete message_r;
       }
+    }
+
+    //remove user from room
+    room->remove_member(user);
 
   }
 
-  void chat_with_sender(Connection *conn, Server *serv, User *user, Message *msg) {
+  void chat_with_sender(Connection *conn, Server *serv, User *user, Message &msg) {
+    
+    Room *room = nullptr;
 
+    while (true) {
+      //make sure last message received was valid
+      if(!conn->receive(msg)) {
+        if(conn->get_last_result() == Connection::INVALID_MSG) {
+          conn->send(Message(TAG_ERR, "Invalid message"));
+        }
+        break;
+      }
+
+      //TAGS: JOIN, LEAVE, QUIT, SENDALL
+      if (msg.tag == TAG_QUIT) {           //User wants to exit
+        conn->send(Message(TAG_OK, "Quitting"));
+        if (room != nullptr) {
+          room->remove_member(user);
+        }
+        return;
+
+      } else if (msg.tag == TAG_JOIN) {    //User wants to join room
+        if (room != nullptr) {            //if already in one leave
+          room->remove_member(user);
+        }
+        room = serv->find_or_create_room(remove_trailing_newline(msg.data));
+        room->add_member(user);
+
+      } else if (msg.tag == TAG_LEAVE) {   //User wants to leave
+        if (room == nullptr) {            //if already in one leave
+          conn->send(Message(TAG_ERR, "cannot leave - not in a room"));
+          continue;
+        }
+        room->remove_member(user);
+        conn->send(Message(TAG_OK, "Left room"));
+        room = nullptr; //set the local variable to null
+
+      } else if (msg.tag == TAG_SENDALL) { //User sending a message
+        if(room == nullptr) {
+          conn->send(Message(TAG_ERR, "join room to send message"));
+          continue;
+        }
+        std::string msg_data = remove_trailing_newline(msg.data);
+        room->broadcast_message(user->username, msg.data);
+        conn->send(Message(TAG_OK, "Sent message"));
+      }
+    }
   }
 
   void *worker(void *arg)
@@ -87,7 +145,7 @@ namespace
     // whatever pointer type describes the object(s) needed
     // to communicate with a client (sender or receiver)
     ClientInfo* clientInfo = static_cast<ClientInfo*>(arg);
-    std::unique_ptr<ConnInfo> info(clientInfo); //use for automatic management of info
+    std::unique_ptr<ClientInfo> info(clientInfo); //use for automatic management of info
 
     // read login message (should be tagged either with
     // TAG_SLOGIN or TAG_RLOGIN), send response
@@ -102,7 +160,7 @@ namespace
 
     int isReceiver = 0; //0 be false, 1 be true
     if(msg.tag == TAG_RLOGIN) {
-      isReceiver == 1;
+      isReceiver = 1;
     } else if (msg.tag != TAG_SLOGIN) { //invalid tag
       info->conn->send(Message(TAG_ERR, "Invalid login attempt"));
       return nullptr;
@@ -123,9 +181,9 @@ namespace
     User *user = new User(username);
 
     if (isReceiver == 1) {
-      chat_with_receiver(info->conn, info->serv, username, &msg);
+      chat_with_receiver(info->conn, info->serv, user, msg);
     } else {
-      chat_with_sender(info->conn, info->serv, username, &msg);
+      chat_with_sender(info->conn, info->serv, user, msg);
     }
 
     return nullptr;
