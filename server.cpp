@@ -69,8 +69,6 @@ namespace
     room->add_member(user);
     conn->send(Message(TAG_OK, user->username + " joined " + room->get_room_name()));
 
-    std::cout << user->username << " is in receiever and in room " << msg.data;
-
     //loop while in room and no failure message
     //see if there is a new message for the user to receieve
     //if so and no error in it, send the message to the user
@@ -93,7 +91,6 @@ namespace
   void chat_with_sender(Connection *conn, Server *serv, User *user, Message &msg) {
     
     Room *room = nullptr;
-    std::cout << user->username << " is in sender and in room " << msg.data;
 
     while (true) {
       //make sure last message received was valid
@@ -106,7 +103,6 @@ namespace
 
       //TAGS: JOIN, LEAVE, QUIT, SENDALL
       if (msg.tag == TAG_QUIT) {           //User wants to exit
-                std::cout << user->username << " is in sender and quitting " << msg.tag << " " << msg.data;
         conn->send(Message(TAG_OK, "Quitting"));
         if (room != nullptr) {
           room->remove_member(user);
@@ -114,7 +110,6 @@ namespace
         return;
 
       } else if (msg.tag == TAG_JOIN) {    //User wants to join room
-                std::cout << user->username << " is in sender and joining " << msg.tag << " " << msg.data;
         if (room != nullptr) {            //if already in one leave
           room->remove_member(user);
         }
@@ -123,8 +118,6 @@ namespace
         conn->send(Message(TAG_OK, "Joined room"));
 
       } else if (msg.tag == TAG_LEAVE) {   //User wants to leave
-                std::cout << user->username << " is in sender and leaving " << msg.tag << " " << msg.data;
-
         if (room == nullptr) {            //if already in one leave
           conn->send(Message(TAG_ERR, "cannot leave - not in a room"));
           continue;
@@ -134,8 +127,6 @@ namespace
         room = nullptr; //set the local variable to null
 
       } else if (msg.tag == TAG_SENDALL) { //User sending a message
-                std::cout << user->username << " is in sender and messaging " << msg.tag << " " << msg.data;
-
         if(room == nullptr) {
           conn->send(Message(TAG_ERR, "join room to send message"));
           continue;
@@ -195,9 +186,6 @@ namespace
     } else {
       chat_with_sender(info->conn, info->serv, user, msg);
     }
-
-    std::cout << msg.tag << " after chats " << msg.data;
-
     return nullptr;
   }
 
