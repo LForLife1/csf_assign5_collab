@@ -33,12 +33,12 @@ void Room::broadcast_message(const std::string &sender_username, const std::stri
   //Create the text for the message, and the message itself
   //Make new object to put on heap
   std::string message_text_tot = room_name + ":" + sender_username + ":" + message_text;
-  Message* message = new Message(TAG_DELIVERY, message_text_tot);
 
   //For each user in the Room, enqueue the message to their message queue
   for(User* user : members) {
     if (user->username != sender_username)
     {
+      Message* message = new Message(TAG_DELIVERY, message_text_tot);
       user->mqueue.enqueue(message);
     }
   }
